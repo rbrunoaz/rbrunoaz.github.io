@@ -2,68 +2,107 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Leilão PRO</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Leilão PRO V.1</title>
 
 <style>
-body { font-family: Arial; background:#0f172a; color:#fff; margin:0;}
-.container { max-width:500px; margin:auto; padding:10px;}
-h2 { text-align:center;}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { font-family: Arial; background:#0f172a; color:#fff; margin:0; }
 
-.card { background:#1e293b; padding:10px; border-radius:10px; margin-bottom:10px;}
+.container { max-width:430px; margin:auto; padding:12px; }
 
-.linha { display:flex; align-items:center; margin:3px 0; position:relative;}
-.linha label { width:110px; font-size:12px;}
+h2 { text-align:center; }
+
+.card { background:#1e293b; padding:12px; border-radius:14px; margin-bottom:12px; }
+
+.linha { display:flex; align-items:center; gap:8px; margin:6px 0; position:relative; }
+.linha label { width:95px; font-size:13px; }
 
 input, select {
-    flex:1; padding:6px;
-    border-radius:6px; border:none;
-    background:#334155; color:#fff;
-    font-size:12px;
+    flex:1;
+    height:44px;
+    font-size:16px;
+    border:none;
+    border-radius:10px;
+    background:#334155;
+    color:#fff;
+    padding:8px;
 }
+
+button {
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:10px;
+    margin-top:6px;
+    font-weight:bold;
+}
+
+.add { background:#22c55e; }
+.delete { background:red; }
 
 .lista-autocomplete {
     position:absolute;
     top:100%;
-    left:110px;
+    left:100px;
     right:0;
     background:#1e293b;
-    border-radius:6px;
-    max-height:120px;
+    border-radius:8px;
+    max-height:150px;
     overflow:auto;
-    z-index:10;
 }
 
 .lista-autocomplete div {
-    padding:6px;
+    padding:8px;
     cursor:pointer;
 }
+.lista-autocomplete div:hover { background:#22c55e; }
 
-.lista-autocomplete div:hover {
-    background:#22c55e;
+.resultado { margin-top:8px; font-size:13px; }
+
+.ok { color:lightgreen; font-weight:bold; }
+.ruim { color:red; font-weight:bold; }
+
+.dashboard {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin-bottom:12px;
 }
 
-button {
-    width:100%; padding:8px; margin-top:5px;
-    border:none; border-radius:8px;
-    font-weight:bold; cursor:pointer;
+.box {
+    background:#1e293b;
+    padding:10px;
+    border-radius:12px;
+    text-align:center;
+    font-size:13px;
 }
 
-.add { background:#22c55e;}
-.delete { background:red;}
-
-.resultado { margin-top:6px; font-size:13px;}
-.ok { color:lightgreen; font-weight:bold;}
-.ruim { color:red; font-weight:bold;}
+.box strong {
+    display:block;
+    font-size:18px;
+    margin-top:4px;
+}
 </style>
 </head>
 
 <body>
 
 <div class="container">
-<h2>Leilão 🚗</h2>
+
+<h2>Leilão 🚗 V.1</h2>
+
+<div class="dashboard">
+    <div class="box">Veículos <strong id="total">0</strong></div>
+    <div class="box">Lucro Total <strong id="lucroTotal">R$ 0</strong></div>
+    <div class="box">🟢 Boas <strong id="boas">0</strong></div>
+    <div class="box">🔴 Ruins <strong id="ruins">0</strong></div>
+</div>
+
 <button class="add" onclick="nova()">+ Novo Veículo</button>
+
 <div id="lista"></div>
+
 </div>
 
 <script>
@@ -80,37 +119,32 @@ async function carregarMarcas(){
 }
 
 function nova(){
-
 let div=document.createElement("div");
 div.className="card";
 
 div.innerHTML=`
 <div class="linha"><label>Lote</label><input></div>
 
-<div class="linha">
-<label>Marca</label>
+<div class="linha"><label>Marca</label>
 <input oninput="filtrarMarca(this)">
 <div class="lista-autocomplete"></div>
 </div>
 
-<div class="linha">
-<label>Modelo</label>
+<div class="linha"><label>Modelo</label>
 <input oninput="filtrarModelo(this)">
 <div class="lista-autocomplete"></div>
 </div>
 
-<div class="linha">
-<label>Ano</label>
+<div class="linha"><label>Ano</label>
 <select onchange="buscarFipe(this)"></select>
 </div>
 
 <div class="linha"><label>FIPE</label><input readonly></div>
 
 <div class="linha"><label>% Venda</label><input type="number" value="80" oninput="calc(this)"></div>
-<div class="linha"><label>Comissão %</label><input type="number" value="5" oninput="calc(this)"></div>
+<div class="linha"><label>Comissão</label><input type="number" value="5" oninput="calc(this)"></div>
 
-<div class="linha">
-<label>Tipo</label>
+<div class="linha"><label>Tipo</label>
 <select onchange="calc(this)">
 <option value="1900">Carro</option>
 <option value="500">Moto</option>
@@ -129,81 +163,28 @@ div.innerHTML=`
 document.getElementById("lista").appendChild(div);
 }
 
-function filtrarMarca(input){
-    let lista = input.nextElementSibling;
-    lista.innerHTML = "";
+function atualizarDash(){
+let total=0, boas=0, ruins=0, lucroTotal=0;
 
-    let termo = input.value.toLowerCase();
+document.querySelectorAll(".card").forEach(c=>{
+let txt=c.querySelector(".resultado").innerText;
+if(!txt) return;
 
-    marcasCache
-    .filter(m => m.nome.toLowerCase().includes(termo))
-    .slice(0,10)
-    .forEach(m=>{
-        let div=document.createElement("div");
-        div.innerText=m.nome;
-        div.onclick=()=>{
-            input.value=m.nome;
-            input.dataset.codigo=m.codigo;
-            lista.innerHTML="";
-        };
-        lista.appendChild(div);
-    });
+total++;
+
+let lucro = Number(txt.split("Lucro: R$ ")[1]?.split("\n")[0].replace(".","").replace(",",".")||0);
+
+if(txt.includes("COMPRA BOA")){
+boas++; lucroTotal+=lucro;
+}else{
+ruins++;
 }
+});
 
-async function filtrarModelo(input){
-    let card=input.parentElement.parentElement;
-    let marcaCodigo=card.children[1].children[1].dataset.codigo;
-
-    if(!marcaCodigo) return;
-
-    let res=await fetch(`https://parallelum.com.br/fipe/api/v1/carros/marcas/${marcaCodigo}/modelos`);
-    let data=await res.json();
-
-    let lista=input.nextElementSibling;
-    lista.innerHTML="";
-
-    let termo=input.value.toLowerCase();
-
-    data.modelos
-    .filter(m=>m.nome.toLowerCase().includes(termo))
-    .slice(0,10)
-    .forEach(m=>{
-        let div=document.createElement("div");
-        div.innerText=m.nome;
-        div.onclick=()=>{
-            input.value=m.nome;
-            input.dataset.codigo=m.codigo;
-            lista.innerHTML="";
-            carregarAnos(card, marcaCodigo, m.codigo);
-        };
-        lista.appendChild(div);
-    });
-}
-
-async function carregarAnos(card, marca, modelo){
-    let select=card.children[3].children[1];
-
-    let res=await fetch(`https://parallelum.com.br/fipe/api/v1/carros/marcas/${marca}/modelos/${modelo}/anos`);
-    let data=await res.json();
-
-    select.innerHTML="";
-    data.forEach(a=>{
-        select.innerHTML+=`<option value="${a.codigo}">${a.nome}</option>`;
-    });
-}
-
-async function buscarFipe(el){
-    let c=el.parentElement.parentElement;
-
-    let marca=c.children[1].children[1].dataset.codigo;
-    let modelo=c.children[2].children[1].dataset.codigo;
-    let ano=el.value;
-
-    let res=await fetch(`https://parallelum.com.br/fipe/api/v1/carros/marcas/${marca}/modelos/${modelo}/anos/${ano}`);
-    let data=await res.json();
-
-    c.children[4].children[1].value=data.Valor.replace("R$ ","").replace(".","").replace(",",".");
-    calc(el);
+document.getElementById("total").innerText=total;
+document.getElementById("boas").innerText=boas;
+document.getElementById("ruins").innerText=ruins;
+document.getElementById("lucroTotal").innerText=moeda(lucroTotal);
 }
 
 function calc(el){
@@ -232,19 +213,13 @@ Comprar até: <b>${moeda(compraMax)}</b><br>
 Lucro: ${moeda(lucro)}<br>
 <span class="${status}">${texto}</span>
 `;
-}
 
-function salvar(){
-let dados=[];
-document.querySelectorAll(".card").forEach(c=>{
-dados.push({lote:c.children[0].children[1].value});
-});
-localStorage.setItem("leilao",JSON.stringify(dados));
+atualizarDash();
 }
 
 function remover(btn){
 btn.parentElement.remove();
-salvar();
+atualizarDash();
 }
 
 carregarMarcas();
